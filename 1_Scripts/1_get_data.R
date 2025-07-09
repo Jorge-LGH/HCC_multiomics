@@ -5,6 +5,7 @@
 #--------------------Load libraries-----------------------
 library(TCGAbiolinks)            # Version: 2.36.0
 library(SummarizedExperiment)    # Version: 1.48.1
+library(tidyverse)               # Version: 2.0.0
 
 #--------------------Query preparation--------------------
 # This section is in charge of making the queries to the TCGA database
@@ -32,14 +33,65 @@ met_res <- getResults(met_query)
 
 #--------------------Data pre-selection-------------------
 # Identify the cases that have available data for mRNA, CpG islands, and miRNA
+# The current TCGA cases' ids are composed with various characters (Eg."TCGA-G3-A3CJ-01A-11R-A213-07"). 
+# The way to make sure the same samples are selected despite their data type (RNA or CpG) is cropping 
+# the id and selecting the common part. Right now, the first 19 characters are enough to provide this information.
+# Additionally, the work will only focus on primary tumors and any available controls, so filtering is required.
+## Check for sample types
+table(exp_res$sample_type) # (371 primary, 3 recurrent, and 50 normal) (08-07-2025)
+
+## Keep only primary and normal
+exp_res <- exp_res[which(exp_res$sample_type != "Recurrent Tumor"),]
+
+## Extract initial samples' names
 cases <- exp_res$cases
 
-# Visit the 
+## Crop the samples' ids
+cases <- substr(cases, 1, 19)
+
+## Check how many are of the cases are shared among the three data types
+Barcode <- cases[cases %in% substr(met_res$cases, 1, 19)] %>% 
+  .[. %in% substr(mir_res$cases, 1 ,19)]
+
+## 407 cases are shared among all three data types
+length(Barcode)                  
 
 #--------------------Data download------------------------
+# This section is in charge of downloading the queries to the TCGA database. The barcode tells the TCGA
+# platform which specific samples I want to request.
+## mRNA
+exp_query <- GDCquery(project = "TCGA-LIHC",                         # Liver hepatocellular carcinoma project
+                      data.category = "Transcriptome Profiling",     # Refers to RNA
+                      data.type = "Gene Expression Quantification",  # Gene expression 
+                      workflow.type = "STAR - Counts",               # How reads are set as counts per gene
+                      barcode = Barcode)                             # Barcode
+GDCdownload(exp_query, "3_Data/GDCdata")                             # Downloading files
 
+## miRNA
+mir_query <- GDCquery(project = "TCGA-LIHC",                         # Liver hepatocellular carcinoma project
+                      data.category = "Transcriptome Profiling",     # Refers to RNA
+                      data.type = "miRNA Expression Quantification", # miRNA gen expression
+                      barcode = Barcode)                             # Barcode
+GDCdownload(mir_query, "3_Data/GDCdata")                             # Downloading files
 
+## Methylation data
+met_query <- GDCquery(project = "TCGA-LIHC",                         # Liver hepatocellular carcinoma project
+                      data.category = "DNA Methylation",             # DNA methylation data
+                      platform = "Illumina Human Methylation 450",   # CpG detection platform
+                      data.type = "Methylation Beta Value",          # Data type
+                      barcode = Barcode)                             # Barcode
+GDCdownload(met_query, "3_Data/GDCdata", files.per.chunk = 50)       # Downloading files. I do not know why
+                                                                     # I had to use the files.per.chunk argument
 
+#--------------------Clinical data------------------------
+# Available clinical data is also important as it can provide more insight into each sample. Not every
+# characteristic will be used, but be sure to check which columns you wish to keep for further analysis.
+## Get clinical data
+cli_data <- GDCquery_clinic(project = "TCGA-LIHC",                   # Liver hepatocellular carcinoma project 
+                            type = "clinical")                       # Acquire clinical data
 
+## Select clinical features
+cli_data <- cli_data[,c("bcr_patient_barcode","gender",
+                "tumor_stage","race","vital_status")]
 
 
