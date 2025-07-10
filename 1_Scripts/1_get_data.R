@@ -91,7 +91,48 @@ cli_data <- GDCquery_clinic(project = "TCGA-LIHC",                   # Liver hep
                             type = "clinical")                       # Acquire clinical data
 
 ## Select clinical features
-cli_data <- cli_data[,c("bcr_patient_barcode","gender",
-                "tumor_stage","race","vital_status")]
+cli_data <- cli_data %>% select(c("bcr_patient_barcode",
+                                  "synchronous_malignancy",
+                                  "prior_malignancy",
+                                  "prior_treatment",
+                                  "tumor_grade",
+                                  "race",
+                                  "gender",
+                                  "vital_status"))
+
+## Additional clinical data
+subtypes <- TCGAquery_subtype("lihc")
+
+## Select specific data
+subtypes <- subtypes %>% select(c("Barcode",
+                                  "ObesityClass1",
+                                  "Alcoholic liver disease",
+                                  "Hepatitis C",
+                                  "Hepatitis B",
+                                  "NAFLD",
+                                  "Ploidy"))
+
+## Formatting data
+subtypes[which(subtypes$ObesityClass1 == "---"),]$ObesityClass1 <- "NA"
+subtypes[which(subtypes$`Alcoholic liver disease` == "---"),]$`Alcoholic liver disease` <- "NA"
+subtypes[which(subtypes$`Hepatitis C` == "---"),]$`Hepatitis C`<- "NA"
+subtypes[which(subtypes$`Hepatitis B` == "---"),]$`Hepatitis B` <- "NA"
+subtypes[which(subtypes$NAFLD == "---"),]$NAFLD <- "NA"
+cli_data[which(cli_data$synchronous_malignancy == "Not Reported"),]$synchronous_malignancy <- "NA"
+cli_data[which(cli_data$prior_malignancy == "not reported"),]$prior_malignancy <- "NA"
+cli_data[which(cli_data$race == "not reported"),]$race <- "Unknown"
+
+#--------------------Save objects-------------------------
+## Check for missing data or duplicates
+sum(substr(Barcode, 1, 12) %in%             # All samples are present in the clinical data
+      cli_data$bcr_patient_barcode)
+
+sum(substr(Barcode, 1, 16) %in%             # Only 189 samples have the subtype data
+      subtypes$Barcode)
+
+## Create data frame and combine data
+sample_data <- data.frame(cbind(Barcode,    # Barcode, patient id, sample type
+                                substr(Barcode, 1, 12),
+                                exp_res[substr(exp_res$cases, 1, 19) %in% Barcode,]$sample_type))
 
 
