@@ -106,7 +106,7 @@ cli_data[which(cli_data$prior_malignancy == "not reported"),]$prior_malignancy <
 cli_data[which(cli_data$race == "not reported"),]$race <- "Unknown"
 
 ## Check for missing data or duplicates
-sum(substr(Barcode, 1, 12) %in%                                               # All samples are present in the clinical data
+sum(substr(Barcode, 1, 12) %in%                                               # All 407 samples are present in the clinical data
       cli_data$bcr_patient_barcode)
 
 ## Create data frame and combine data
@@ -126,7 +126,7 @@ duplicated_data <- merge(duplicated_samples, cli_data, by.x="V2", by.y="bcr_pati
 samples_data <- rbind(sample_data, duplicated_data)                           # Merge data
 samples_data <- samples_data[order(samples_data$Barcode, decreasing = TRUE),] # Sort by barcode
 rownames(samples_data) <- c(1:nrow(samples_data))                             # re-index dataframe
-colnames(samples_data)[c(1,3)] <- c("patient_id", "sample_type")
+colnames(samples_data)[c(1,3)] <- c("patient_id", "sample_type")              # Change column names
 
 #--------------------Save objects-------------------------
 write.table(samples_data,"3_Data/samples_data.tsv",sep='\t',quote=F,row.names=F)
