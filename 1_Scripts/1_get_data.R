@@ -100,39 +100,34 @@ cli_data <- cli_data %>% select(c("bcr_patient_barcode",
                                   "gender",
                                   "vital_status"))
 
-## Additional clinical data
-subtypes <- TCGAquery_subtype("lihc")
-
-## Select specific data
-subtypes <- subtypes %>% select(c("Barcode",
-                                  "ObesityClass1",
-                                  "Alcoholic liver disease",
-                                  "Hepatitis C",
-                                  "Hepatitis B",
-                                  "NAFLD",
-                                  "Ploidy"))
-
-## Formatting data
-subtypes[which(subtypes$ObesityClass1 == "---"),]$ObesityClass1 <- "NA"
-subtypes[which(subtypes$`Alcoholic liver disease` == "---"),]$`Alcoholic liver disease` <- "NA"
-subtypes[which(subtypes$`Hepatitis C` == "---"),]$`Hepatitis C`<- "NA"
-subtypes[which(subtypes$`Hepatitis B` == "---"),]$`Hepatitis B` <- "NA"
-subtypes[which(subtypes$NAFLD == "---"),]$NAFLD <- "NA"
+## Format selected data
 cli_data[which(cli_data$synchronous_malignancy == "Not Reported"),]$synchronous_malignancy <- "NA"
 cli_data[which(cli_data$prior_malignancy == "not reported"),]$prior_malignancy <- "NA"
 cli_data[which(cli_data$race == "not reported"),]$race <- "Unknown"
 
-#--------------------Save objects-------------------------
 ## Check for missing data or duplicates
-sum(substr(Barcode, 1, 12) %in%             # All samples are present in the clinical data
+sum(substr(Barcode, 1, 12) %in%                                               # All samples are present in the clinical data
       cli_data$bcr_patient_barcode)
 
-sum(substr(Barcode, 1, 16) %in%             # Only 189 samples have the subtype data
-      subtypes$Barcode)
-
 ## Create data frame and combine data
-sample_data <- data.frame(cbind(Barcode,    # Barcode, patient id, sample type
+sample_data <- data.frame(cbind(Barcode,                                      # Barcode, patient id, sample type
                                 substr(Barcode, 1, 12),
                                 exp_res[substr(exp_res$cases, 1, 19) %in% Barcode,]$sample_type))
+## Duplicated samples
+# Some samples have tumor and control tissues, so it helps to separate4 and then integrate it again
+duplicated_samples <- sample_data[which(duplicated(sample_data$V2)),]
+unique_samples <- sample_data[which(!duplicated(sample_data$V2)),]
 
+## Merge clinical data
+sample_data <- merge(unique_samples, cli_data, by.x="V2", by.y="bcr_patient_barcode")
+duplicated_data <- merge(duplicated_samples, cli_data, by.x="V2", by.y="bcr_patient_barcode")
+
+# Every sample with its clinical metadata combined
+samples_data <- rbind(sample_data, duplicated_data)                           # Merge data
+samples_data <- samples_data[order(samples_data$Barcode, decreasing = TRUE),] # Sort by barcode
+rownames(samples_data) <- c(1:nrow(samples_data))                             # re-index dataframe
+colnames(samples_data)[c(1,3)] <- c("patient_id", "sample_type")
+
+#--------------------Save objects-------------------------
+write.table(samples_data,"3_Data/samples_data.tsv",sep='\t',quote=F,row.names=F)
 
