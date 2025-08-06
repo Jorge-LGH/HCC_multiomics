@@ -8,6 +8,7 @@ library(tidyverse)               # Version: 2.0.0
 library(biomaRt)                 # Version: 2.64.0
 library(NOISeq)                  # Version: 2.52.0
 library(edgeR)                   # Version: 4.6.2
+library(EDASeq)                  # Version: 2.42.0
 
 #--------------------Load object--------------------------
 # To understand where this object came from, check the 1_get_data.R script
@@ -71,10 +72,10 @@ ann_data <- getBM(attributes = c("ensembl_gene_id",
 ann_data$length <- abs(ann_data$end_position - ann_data$start_position)        # Add length
 
 # Remove non protein coding genes from annotation
-ann_data <- ann_data[which(ann_data$gene_biotype == "protein_coding"),]        # 19,397 genes remain
+ann_data <- ann_data[which(ann_data$gene_biotype == "protein_coding"),]        # 19,350 genes remain
 
 # Remove transcripts with no annotation data
-exp_data <- exp_data[which(rownames(exp_data) %in% ann_data$ensembl_gene_id),] # Still 19,937
+exp_data <- exp_data[which(rownames(exp_data) %in% ann_data$ensembl_gene_id),] # Still 19,350
 
 #--------------------Check for biases---------------------
 # Create noiseq object for it to be compatible with selected workflow
@@ -107,19 +108,53 @@ table(cd_data@dat$DiagnosticTest[, "Diagnostic Test"])                     # 374
 explo.plot(cd_data, samples = sample(1:ncol(exp_data),10))                 # The result clearly shows composition bias
 
 # Check for GC bias
-# The results show a little effect on expression values based on the GC content, however in neither case do the values
-# have a fit of 50% or over. The fit for the cancer samples is 49.13% with a p value of 2.3e-08. The fit for the controls
-# is of 38.55% and a p value of 2.1e-05
+# The results show a little effect on expression values based on the GC content.The fit for the cancer samples
+# is 51.06% with a p value of 7.5e-09. The fit for the controls is of 37.71% and a p value of 4e-05
 gc_content <- dat(noiseqData, type = "GCbias", k = 0, factor = "sample_type")
 explo.plot(gc_content)  
 
 # Check for length bias
-# The results show a little effect on expression values based on the GC content. The fit for the cancer samples is 51.36% 
-# with a p value of 1.5e-09. The fit for the controls is of 38.88% and a p value of 7.4e-06
+# The results show a little effect on expression values based on the GC content. The fit for the cancer samples is 53.07% 
+# with a p value of 5.2e-10. The fit for the controls is of 52.58% and a p value of 9.7e-07
 len_bias <- dat(noiseqData, k = 0, type = "lengthbias", factor = "sample_type")
 explo.plot(len_bias)
 
 # Check for batch effect
 # The samples do aggregate mostly by cancerous and control samples
+# PC1 explains 20% and PC2 explains 8%
 myPCA = dat(noiseqData, type = "PCA", norm = F, logtransf = F)
 explo.plot(myPCA, factor = "sample_type")
+
+#--------------------Solve biases-------------------------
+# Filter genes with low counts (CPM) < 0
+exp_data <- filtered.data(exp_data,                   # Data to filter    
+                          factor = "sample_type",     # Samples' conditions
+                          norm = F,                   # If normalized or not
+                          method = 1,                 # Filtering method (CPM)
+                          cpm = 0,                    # CPM threshold
+                          p.adj = "fdr")              # Correction method
+dim(exp_data)                                         # 9,801 genes remain
+
+# Filter annotation data
+ann_data <- ann_data[which(ann_data$ensembl_gene_id %in% rownames(exp_data)),]
+
+# New NOISEq object to test and solve biases
+colnames(exp_data) <- samples_data$Barcode
+new_noiseq <- newSeqExpressionSet(counts = as.matrix(exp_data),
+                                  featureData = as.data.frame(ann_data, row.names = ann_data$ensembl_gene_id),
+                                  phenoData = as.data.frame(samples_data, row.names = samples_data$Barcode)) 
+
+# Solve GC and length bias (in that order)
+gcFull <- withinLaneNormalization(new_noiseq,
+                                  "percentage_gene_gc_content",
+                                  which = "full")
+
+lFull <- withinLaneNormalization(gcFull,
+                                 "length",
+                                 which = "full")
+
+# TMM normalization 
+full_TMM <- tmm(normCounts(lFull),
+                long = 1000,
+                lc = 0,
+                k = 0)
