@@ -65,14 +65,14 @@ exp_query <- GDCquery(project = "TCGA-LIHC",                         # Liver hep
                       data.type = "Gene Expression Quantification",  # Gene expression 
                       workflow.type = "STAR - Counts",               # How reads are set as counts per gene
                       barcode = Barcode)                             # Barcode
-GDCdownload(exp_query, "3_Data/GDCdata")                             # Downloading files
+GDCdownload(exp_query, directory = "3_Data/GDCdata")                 # Downloading files
 
 ## miRNA
 mir_query <- GDCquery(project = "TCGA-LIHC",                         # Liver hepatocellular carcinoma project
                       data.category = "Transcriptome Profiling",     # Refers to RNA
                       data.type = "miRNA Expression Quantification", # miRNA gen expression
                       barcode = Barcode)                             # Barcode
-GDCdownload(mir_query, "3_Data/GDCdata")                             # Downloading files
+GDCdownload(mir_query, directory = "3_Data/GDCdata")                 # Downloading files
 
 ## Methylation data
 met_query <- GDCquery(project = "TCGA-LIHC",                         # Liver hepatocellular carcinoma project
@@ -80,8 +80,8 @@ met_query <- GDCquery(project = "TCGA-LIHC",                         # Liver hep
                       platform = "Illumina Human Methylation 450",   # CpG detection platform
                       data.type = "Methylation Beta Value",          # Data type
                       barcode = Barcode)                             # Barcode
-GDCdownload(met_query, "3_Data/GDCdata", files.per.chunk = 50)       # Downloading files. I do not know why
-                                                                     # I had to use the files.per.chunk argument
+GDCdownload(met_query, directory = "3_Data/GDCdata",                 # Downloading files. I had to select a files
+            files.per.chunk = 50)                                    # per chunk argument due to the data's size
 
 #--------------------Clinical data------------------------
 # Available clinical data is also important as it can provide more insight into each sample. Not every
