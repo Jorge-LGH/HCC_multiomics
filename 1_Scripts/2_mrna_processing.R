@@ -11,6 +11,7 @@ library(edgeR)                   # Version: 4.6.2
 library(EDASeq)                  # Version: 2.42.0
 library(cqn)                     # Version: 1.45.0
 library(DESeq2)                  # Version: 1.48.1
+library(ggrepel)                 # Version: 0.9.6
 
 #--------------------Load object--------------------------
 # To understand where this object came from, check the 1_get_data.R script
@@ -105,7 +106,7 @@ cpm_hist <- ggplot(exp_data, aes(x = rowMeans(cpm(exp_data, log = T)))) +
   theme_classic() + 
   geom_vline(aes(xintercept = 0), linetype = "dashed", colour = "red")
 cpm_hist
-ggsave("2_Figures/cpm_before_norm.png", plot = cpm_hist)                   # Save plot 
+ggsave("2_Figures/exp_cpm_before_norm.png", plot = cpm_hist)                   # Save plot 
 sum(rowMeans(cpm(exp_data, log = T))>0)/nrow(exp_data)*100                 # ~64% genes have CPM>0
 
 # Check for transcript composition bias
@@ -120,15 +121,15 @@ dev.off()
 # The results show a little effect on expression values based on the GC content.The fit for the cancer samples
 # is 51.06% with a p value of 7.5e-09. The fit for the controls is of 37.71% and a p value of 4e-05
 gc_content <- dat(noiseqData, type = "GCbias", k = 0, factor = "sample_type")
-png("2_Figures/gc_bias_before_norm.png",width=1000)
+png("2_Figures/exp_gc_bias_before_norm.png",width=1000)
 explo.plot(gc_content)  
 dev.off()
 
 # Check for length bias
-# The results show a little effect on expression values based on the GC content. The fit for the cancer samples is 53.07% 
+# The results show a little effect on expression values based on the length. The fit for the cancer samples is 53.07% 
 # with a p value of 5.2e-10. The fit for the controls is of 52.58% and a p value of 9.7e-07
 len_bias <- dat(noiseqData, k = 0, type = "lengthbias", factor = "sample_type")
-png("2_Figures/length_bias_before_norm.png",width=1000)
+png("2_Figures/exp_length_bias_before_norm.png",width=1000)
 explo.plot(len_bias)
 dev.off()
 
@@ -136,7 +137,7 @@ dev.off()
 # The samples do aggregate mostly by cancerous and control samples
 # PC1 explains 20% and PC2 explains 8%
 myPCA = dat(noiseqData, type = "PCA", norm = F, logtransf = F)
-png("2_Figures/batch_effect_before_norm.png",width=1000)
+png("2_Figures/exp_batch_effect_before_norm.png",width=1000)
 explo.plot(myPCA, factor = "sample_type")
 dev.off()
 
@@ -153,11 +154,8 @@ dim(exp_data)                                         # 9,801 genes remain
 # Filter annotation data
 ann_data <- ann_data[which(ann_data$ensembl_gene_id %in% rownames(exp_data)),]
 
-# New NOISEq object to test and solve biases
+# Column names must match
 colnames(exp_data) <- samples_data$Barcode
-new_noiseq <- newSeqExpressionSet(counts = as.matrix(exp_data),
-                                  featureData = as.data.frame(ann_data, row.names = ann_data$ensembl_gene_id),
-                                  phenoData = as.data.frame(samples_data, row.names = samples_data$Barcode)) 
 
 # Solve GC and length bias using cqn (conditional quantile normalization)
 counts <- as.matrix(exp_data)                         # Raw counts 
@@ -189,7 +187,7 @@ cqn_arsyn <- ARSyNseq(cqn_noiseq,
 
 # Check batch effect removal visually
 myPCA <- dat(cqn_arsyn, type = "PCA", norm = T, logtransf = T)       # Perform PCA
-png("2_Figures/batch_effect_after_norm.png",width=1000)
+png("2_Figures/exp_batch_effect_after_norm.png",width=1000)
 explo.plot(myPCA, factor = "sample_type")                            # PCA1 = 71%, PCA2 = 1%
 dev.off()
 
@@ -208,13 +206,13 @@ dev.off()
 
 # Check for GC content bias
 new_gc_content <- dat(new_noiseq, type = "GCbias", k = 0, factor = "sample_type", norm = T)
-png("2_Figures/gc_bias_after_norm.png",width=1000)
+png("2_Figures/exp_gc_bias_after_norm.png",width=1000)
 explo.plot(new_gc_content)  
 dev.off()
 
 # Check for length bias
 new_len_bias <- dat(new_noiseq, k = 0, type = "lengthbias", factor = "sample_type", norm = T)
-png("2_Figures/length_bias_after_norm.png",width=1000)
+png("2_Figures/exp_length_bias_after_norm.png",width=1000)
 explo.plot(new_len_bias)
 dev.off()
 
@@ -254,7 +252,7 @@ top_50_genes <- diff_res[which(
     diff_res$Expression == "Up-regulated"),]$log2FoldChange, decreasing = T), ] %>% head(.,50)
 
 ## Plot itself
-png("2_Figures/diff_plot.png",width=1000)
+png("2_Figures/exp_diff_plot.png",width=1000)
 ggplot(diff_res, aes(log2FoldChange, -log(pvalue,10))) +
   geom_point(aes(color = Expression), size = 1.5, alpha=.7) +
   scale_color_manual(values = c("dodgerblue3", "gray50", "firebrick3")) +
@@ -273,3 +271,6 @@ ggplot(diff_res, aes(log2FoldChange, -log(pvalue,10))) +
                    arrow = arrow(length = unit(0.02, "npc")),
                    nudge_x = 0.5)
 dev.off()
+
+#--------------------Save objects-------------------------
+write.table(diff_res,"3_Data/exp_diff_exp.tsv",sep=',',row.names=T)
