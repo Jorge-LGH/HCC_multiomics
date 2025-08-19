@@ -246,3 +246,5 @@ ggplot(diff_res, aes(log2FoldChange, -log(pvalue,10))) +
                    nudge_x = 0.2)
 dev.off()
 
+#--------------------Save objects-------------------------
+write.table(diff_res,"3_Data/mir_diff.tsv",sep=',',row.names=T)

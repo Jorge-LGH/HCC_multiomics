@@ -242,6 +242,9 @@ diff_res <- diff_res %>% mutate(Expression = case_when(log2FoldChange >= 1 & pva
                                                        log2FoldChange <= -1 & pvalue <= 0.05 ~ "Down-regulated",
                                                        TRUE ~ "Unchanged"))
 
+# Check for differential expression results
+table(diff_res$Expression)
+
 ## Extract ID from 50 top and 50 bottom differentially expressed
 bot_50_genes <- diff_res[which(
   diff_res$Expression == "Down-regulated"),][order(diff_res[which(
