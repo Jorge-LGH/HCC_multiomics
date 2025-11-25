@@ -11,6 +11,7 @@ library(edgeR)                   # Version: 4.6.2
 library(EDASeq)                  # Version: 2.42.0
 library(cqn)                     # Version: 1.45.0
 library(DESeq2)                  # Version: 1.48.1
+library(ggrepel)                 # Version: 0.9.6
 
 #--------------------Load object--------------------------
 # To understand where this object came from, check the 1_get_data.R script
@@ -43,10 +44,11 @@ mir_data <- mir_data[rowSums(mir_data) != 0, , drop = FALSE]         # 1,526 gen
 
 #--------------------Annotation data----------------------
 # Get annotation data
-mart <- useEnsembl("ensembl", dataset = "hsapiens_gene_ensembl")            # Data set to use
-ann_data <- getBM(attributes = c("percentage_gene_gc_content",              # miRNA GC content
-                                 "mirbase_id",                              # mirbase ID
-                                 "start_position",              
+mart <- useEnsembl("ensembl", dataset = "hsapiens_gene_ensembl", version = 110)  # Data set to use
+ann_data <- getBM(attributes = c("mirbase_id",                                   # mirbase ID
+                                 "percentage_gene_gc_content",                   # miRNA GC content
+                                 "start_position",
+                                 "chromosome_name",
                                  "end_position"),
                   mart=mart)
 ann_data$length <- ann_data$end_position - ann_data$start_position          # Add miRNA length
@@ -88,7 +90,7 @@ cd_data <- dat(noiseqData, type = "cd", norm = F)                          # Ref
 table(cd_data@dat$DiagnosticTest[, "Diagnostic Test"])                     # 405 Failed and 1 Passed (12-08-2025)
 
 png("2_Figures/mir_transcript_bias_before_norm.png",width=1000)
-explo.plot(cd_data, samples = sample(1:ncol(exp_data),10))                 # The result clearly shows composition bias
+explo.plot(cd_data, samples = sample(1:ncol(mir_data),10))                 # The result clearly shows composition bias
 dev.off()
 
 # Check for GC bias
@@ -174,17 +176,37 @@ png("2_Figures/mir_val_bar_after_norm.png",width=1000)
 explo.plot(new_counts_data, plottype = "boxplot")                    # Expression values
 dev.off()
 
-# Check for GC content bias
-new_gc_content <- dat(new_noiseq, type = "GCbias", k = 0, factor = "sample_type", norm = T)
-png("2_Figures/mir_gc_bias_after_norm.png",width=1000)
-explo.plot(new_gc_content)  
-dev.off()
+# Check for GC and length bias
+# I had to check it manually since the EDASeq functions need more features. Since there are only 218 in this case, I can do it this way
+expr_mean <- rowMeans(cqn_arsyn@assayData$exprs)
 
-# Check for length bias
-new_len_bias <- dat(new_noiseq, k = 0, type = "lengthbias", factor = "sample_type", norm = T)
-png("2_Figures/mir_length_bias_after_norm.png",width=1000)
-explo.plot(new_len_bias)
-dev.off()
+bias_df <- data.frame(expr = expr_mean,
+                      GC = ann_data$percentage_gene_gc_content,
+                      length = ann_data$length,
+                      mirbase_id = ann_data$mirbase_id)
+
+gc_after <- ggplot(bias_df, aes(x = GC, y = expr)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "loess", se = FALSE, color = "blue") +
+  theme_classic() +
+  labs(title = "GC content bias after CQN",
+       x = "GC% (miRNA)",
+       y = "Normalized expression")
+
+gc_after
+
+len_after <- ggplot(bias_df, aes(x = length, y = expr)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  theme_classic() +
+  labs(title = "Length bias after CQN",
+       x = "miRNA length (nt)",
+       y = "Normalized expression")
+
+len_after
+
+ggsave("2_Figures/mir_gc_bias_after_norm.png", plot = gc_after) 
+ggsave("2_Figures/mir_length_bias_after_norm.png", plot = len_after) 
 
 #--------------------Save expression matrix---------------
 write.table(new_noiseq@assayData$exprs,"3_Data/norm_mir_data.tsv",sep=',',row.names=T)

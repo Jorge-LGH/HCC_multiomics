@@ -61,17 +61,19 @@ exp_data <- exp_data[rowSums(exp_data) != 0, , drop = FALSE]
 
 #--------------------Annotation data----------------------
 # Get annotation data
-mart <- useEnsembl("ensembl", dataset = "hsapiens_gene_ensembl")
+mart <- useEnsembl("ensembl", dataset = "hsapiens_gene_ensembl", version = 110)
 ann_data <- getBM(attributes = c("ensembl_gene_id", 
                                  "percentage_gene_gc_content", 
                                  "gene_biotype",
                                  "start_position",
                                  "end_position",
                                  "hgnc_id",
+                                 "chromosome_name",
                                  "hgnc_symbol"),
                   filters = "ensembl_gene_id", 
                   values=rownames(exp_data), 
                   mart=mart)
+ann_data <- ann_data[which(!duplicated(ann_data$ensembl_gene_id)),]            # Remove duplicated annotations
 ann_data$length <- abs(ann_data$end_position - ann_data$start_position)        # Add length
 
 # Remove non protein coding genes from annotation
@@ -82,7 +84,8 @@ exp_data <- exp_data[which(rownames(exp_data) %in% ann_data$ensembl_gene_id),] #
 
 #--------------------Check for biases---------------------
 # Create noiseq object for it to be compatible with selected workflow
-noiseqData <- NOISeq::readData(exp_data,factors = samples_data,
+noiseqData <- NOISeq::readData(exp_data,
+                               factors = samples_data,
                                gc = ann_data[, c("ensembl_gene_id", "percentage_gene_gc_content")],
                                biotype = ann_data[, c("ensembl_gene_id", "gene_biotype")],
                                length = ann_data[, c("ensembl_gene_id", "length")])
@@ -106,7 +109,7 @@ cpm_hist <- ggplot(exp_data, aes(x = rowMeans(cpm(exp_data, log = T)))) +
   theme_classic() + 
   geom_vline(aes(xintercept = 0), linetype = "dashed", colour = "red")
 cpm_hist
-ggsave("2_Figures/exp_cpm_before_norm.png", plot = cpm_hist)                   # Save plot 
+ggsave("2_Figures/exp_cpm_before_norm.png", plot = cpm_hist)               # Save plot 
 sum(rowMeans(cpm(exp_data, log = T))>0)/nrow(exp_data)*100                 # ~64% genes have CPM>0
 
 # Check for transcript composition bias
@@ -188,7 +191,7 @@ cqn_arsyn <- ARSyNseq(cqn_noiseq,
 # Check batch effect removal visually
 myPCA <- dat(cqn_arsyn, type = "PCA", norm = T, logtransf = T)       # Perform PCA
 png("2_Figures/exp_batch_effect_after_norm.png",width=1000)
-explo.plot(myPCA, factor = "sample_type")                            # PCA1 = 71%, PCA2 = 1%
+explo.plot(myPCA, factor = "sample_type")                            # PCA1 = 13%, PCA2 = 1%
 dev.off()
 
 # New NOISeq object to check for GC and length bias

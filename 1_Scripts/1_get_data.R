@@ -80,8 +80,8 @@ met_query <- GDCquery(project = "TCGA-LIHC",                         # Liver hep
                       platform = "Illumina Human Methylation 450",   # CpG detection platform
                       data.type = "Methylation Beta Value",          # Data type
                       barcode = Barcode)                             # Barcode
-GDCdownload(met_query, directory = "3_Data/GDCdata",                 # Downloading files. I had to select a files
-            files.per.chunk = 50)                                    # per chunk argument due to the data's size
+GDCdownload(met_query, directory = "3_Data/GDCdata",                 # Downloading files. I had to select a "files
+            files.per.chunk = 50)                                    # per chunk" argument due to the data's size
 
 #--------------------Clinical data------------------------
 # Available clinical data is also important as it can provide more insight into each sample. Not every
@@ -101,9 +101,9 @@ cli_data <- cli_data %>% select(c("bcr_patient_barcode",
                                   "vital_status"))
 
 ## Format selected data
-cli_data[which(cli_data$synchronous_malignancy == "Not Reported"),]$synchronous_malignancy <- "NA"
-cli_data[which(cli_data$prior_malignancy == "not reported"),]$prior_malignancy <- "NA"
-cli_data[which(cli_data$race == "not reported"),]$race <- "Unknown"
+cli_data[which(cli_data$synchronous_malignancy == "Not Reported"),]$synchronous_malignancy <- "NA" # Change not reported to NA
+cli_data[which(cli_data$prior_malignancy == "not reported"),]$prior_malignancy <- "NA"             # Change not reported to NA
+cli_data[which(cli_data$race == "not reported"),]$race <- "Unknown"                                # Change not reported to Unknown
 
 ## Check for missing data or duplicates
 sum(substr(Barcode, 1, 12) %in%                                               # All 407 samples are present in the clinical data
@@ -114,7 +114,7 @@ sample_data <- data.frame(cbind(Barcode,                                      # 
                                 substr(Barcode, 1, 12),
                                 exp_res[substr(exp_res$cases, 1, 19) %in% Barcode,]$sample_type))
 ## Duplicated samples
-# Some samples have tumor and control tissues, so it helps to separate4 and then integrate it again
+# Some samples have tumor and control tissues, so it helps to separate and then integrate it again
 duplicated_samples <- sample_data[which(duplicated(sample_data$V2)),]
 unique_samples <- sample_data[which(!duplicated(sample_data$V2)),]
 

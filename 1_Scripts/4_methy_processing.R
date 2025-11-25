@@ -4,6 +4,7 @@
 library(TCGAbiolinks)            # Version: 2.36.0
 library(SummarizedExperiment)    # Version: 1.48.1
 library(tidyverse)               # Version: 2.0.0
+library(methyLImp2)              # Version: 1.2.0
 
 #--------------------Load object--------------------------
 # To understand where this object came from, check the 1_get_data.R script
@@ -22,7 +23,7 @@ met_data <- GDCprepare(met_query,                                    # Query obj
                        directory = "3_Data/GDCdata/",                # Directory where files are stored
                        summarizedExperiment = T)                     # Create summarized experiment (includes little metadata)
 
-# Filter data with just 0's asidde from NAs
+# Filter data with just 0's aside from NAs
 met_data <- met_data[rowSums(met_data@assays@data@listData[[1]],
                              na.rm=T) != 0, ,drop = FALSE]
 
@@ -30,6 +31,15 @@ met_data <- met_data[rowSums(met_data@assays@data@listData[[1]],
 met_data <- met_data[which(!rowSums(
   is.na(met_data@assays@data@listData[[1]])) >
     (ncol(met_data@assays@data@listData[[1]])*0.2)),]
+
+# Check for probes with ambiguous chromosome mapping
+seqnames(rowRanges(met_data)) %>% table()                            # No ambiguous mappaing apparently (25-11-2025)
+
+# Impute missing values with regression based method. See: https://doi.org/10.1186/s12859-020-03592-5
+met_data_imputed <- methyLImp2(met_data,
+                               type = "450K",
+                               groups = met_data@colData@listData[["definition"]],
+                               BPPARAM = BiocParallel::SnowParam(workers = 10))
 
 #--------------------Differential methylation-------------
 TCGAanalyze_DMC(met_data,
