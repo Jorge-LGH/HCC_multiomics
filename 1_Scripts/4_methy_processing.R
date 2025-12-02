@@ -23,8 +23,14 @@ met_data <- GDCprepare(met_query,                                    # Query obj
                        directory = "3_Data/GDCdata/",                # Directory where files are stored
                        summarizedExperiment = T)                     # Create summarized experiment (includes little metadata)
 
+# Starting object qualities
+dim(met_data)                                                        # 485,577 probes across 407 samples
+sum(is.na(assay(met_data)))                                          # 31,589,946 NA's (need to impute values after some filtering)
+sum(colSums(assay(met_data), na.rm = T) == 0)                        # No empty columns (Should worry if it wasn't the case)
+sum(rowSums(assay(met_data), na.rm = T) == 0)                        # There are 64,213 rows with only 0's if we drop the NA's
+
 # Filter data with just 0's aside from NAs
-met_data <- met_data[rowSums(met_data@assays@data@listData[[1]],
+met_data <- met_data[rowSums(met_data@assays@data@listData[[1]],     # 421,364 probes remain
                              na.rm=T) != 0, ,drop = FALSE]
 
 # Filter data that is missing in 20% or more of the samples
@@ -35,11 +41,16 @@ met_data <- met_data[which(!rowSums(
 # Check for probes with ambiguous chromosome mapping
 seqnames(rowRanges(met_data)) %>% table()                            # No ambiguous mappaing apparently (25-11-2025)
 
+#--------------------Methylation data imputation----------
 # Impute missing values with regression based method. See: https://doi.org/10.1186/s12859-020-03592-5
 met_data_imputed <- methyLImp2(met_data,
                                type = "450K",
                                groups = met_data@colData@listData[["definition"]],
-                               BPPARAM = BiocParallel::SnowParam(workers = 10))
+                               BPPARAM = BiocParallel::SnowParam(workers = 30))
+
+#--------------------QC and filtering---------------------
+minfi::dropLociWithSnps(met_data)
+
 
 #--------------------Differential methylation-------------
 TCGAanalyze_DMC(met_data,
