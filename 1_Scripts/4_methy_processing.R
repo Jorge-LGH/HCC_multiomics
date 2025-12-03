@@ -33,13 +33,17 @@ sum(rowSums(assay(met_data), na.rm = T) == 0)                        # There are
 met_data <- met_data[rowSums(met_data@assays@data@listData[[1]],     # 421,364 probes remain
                              na.rm=T) != 0, ,drop = FALSE]
 
-# Filter data that is missing in 20% or more of the samples
-met_data <- met_data[which(!rowSums(
+# Filter probes with missing values in 20% or more of the samples
+met_data <- met_data[which(!rowSums(                                 # 396,413 probes remain
   is.na(met_data@assays@data@listData[[1]])) >
     (ncol(met_data@assays@data@listData[[1]])*0.2)),]
 
 # Check for probes with ambiguous chromosome mapping
-seqnames(rowRanges(met_data)) %>% table()                            # No ambiguous mappaing apparently (25-11-2025)
+seqnames(rowRanges(met_data)) %>% table()                            # No ambiguous mapping apparently (25-11-2025)
+
+#--------------------QC-----------------------------------
+# Check beta values distribution
+
 
 #--------------------Methylation data imputation----------
 # Impute missing values with regression based method. See: https://doi.org/10.1186/s12859-020-03592-5
@@ -47,10 +51,6 @@ met_data_imputed <- methyLImp2(met_data,
                                type = "450K",
                                groups = met_data@colData@listData[["definition"]],
                                BPPARAM = BiocParallel::SnowParam(workers = 30))
-
-#--------------------QC and filtering---------------------
-minfi::dropLociWithSnps(met_data)
-
 
 #--------------------Differential methylation-------------
 TCGAanalyze_DMC(met_data,
