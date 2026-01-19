@@ -208,8 +208,17 @@ len_after
 ggsave("2_Figures/mir_gc_bias_after_norm.png", plot = gc_after) 
 ggsave("2_Figures/mir_length_bias_after_norm.png", plot = len_after) 
 
-#--------------------Save expression matrix---------------
-write.table(new_noiseq@assayData$exprs,"3_Data/norm_mir_data.tsv",sep=',',row.names=T)
+#--------------------Centering and scaling----------------
+# Based on doi: 10.1093/bib/bbx060 to make the impact of components' variable comparable between data levels independently
+# from the number of variables in each block. In this case, it was decided to divide the data blocks by the square root
+# of the first eigenvalue of the transpose block multiplied by the original block and divided by the number of samples
+mir_eigen<- new_noiseq@assayData$exprs/
+  sqrt(eigen((t(as.matrix(new_noiseq@assayData$exprs)) %*% as.matrix(new_noiseq@assayData$exprs))/
+               ncol(new_noiseq@assayData$exprs))$values[1])
+
+#--------------------Save expression matrices-------------
+write.table(new_noiseq@assayData$exprs,"3_Data/norm_mir_data.tsv",sep=',',row.names=T) # Normalized miRNA expression values
+write.table(mir_eigen,"3_Data/eig_mir_comparable.tsv",sep=',',row.names=T)             # Normalized, centered, and scaled values
 
 #--------------------Differential expression analysis-----
 # Differential expression analysis performed with DESeq2
