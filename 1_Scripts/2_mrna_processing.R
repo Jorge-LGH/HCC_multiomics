@@ -219,8 +219,17 @@ png("2_Figures/exp_length_bias_after_norm.png",width=1000)
 explo.plot(new_len_bias)
 dev.off()
 
-#--------------------Save expression matrix---------------
-write.table(new_noiseq@assayData$exprs,"3_Data/norm_exp_data.tsv",sep=',',row.names=T)
+#--------------------Centering and scaling----------------
+# Based on doi: 10.1093/bib/bbx060 to make the impact of components' variable comparable between data levels independently
+# from the number of variables in each block. In this case, it was decided to divide the data blocks by the square root
+# of the first eigenvalue of the transpose block multiplied by the original block and divided by the number of samples
+exp_eigen<- new_noiseq@assayData$exprs/
+  sqrt(eigen((t(as.matrix(new_noiseq@assayData$exprs)) %*% as.matrix(new_noiseq@assayData$exprs))/
+               ncol(new_noiseq@assayData$exprs))$values[1])
+
+#--------------------Save expression matrices-------------
+write.table(new_noiseq@assayData$exprs,"3_Data/norm_exp_data.tsv",sep=',',row.names=T) # Normalized mRNA expression values
+write.table(exp_eigen,"3_Data/eig_exp_comparable.tsv",sep=',',row.names=T)             # Normalized, centered, and scaled values
 
 #--------------------Differential expression analysis-----
 # Differential expression analysis performed with DESeq2
