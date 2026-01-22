@@ -44,7 +44,7 @@ mir_data <- mir_data[rowSums(mir_data) != 0, , drop = FALSE]         # 1,526 gen
 
 #--------------------Annotation data----------------------
 # Get annotation data
-mart <- useEnsembl("ensembl", dataset = "hsapiens_gene_ensembl", version = 110)  # Data set to use
+mart <- useEnsembl("ensembl", dataset = "hsapiens_gene_ensembl")                 # Data set to use
 ann_data <- getBM(attributes = c("mirbase_id",                                   # mirbase ID
                                  "percentage_gene_gc_content",                   # miRNA GC content
                                  "start_position",

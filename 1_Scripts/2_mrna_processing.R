@@ -61,7 +61,7 @@ exp_data <- exp_data[rowSums(exp_data) != 0, , drop = FALSE]
 
 #--------------------Annotation data----------------------
 # Get annotation data
-mart <- useEnsembl("ensembl", dataset = "hsapiens_gene_ensembl", version = 110)
+mart <- useEnsembl("ensembl", dataset = "hsapiens_gene_ensembl")
 ann_data <- getBM(attributes = c("ensembl_gene_id", 
                                  "percentage_gene_gc_content", 
                                  "gene_biotype",
