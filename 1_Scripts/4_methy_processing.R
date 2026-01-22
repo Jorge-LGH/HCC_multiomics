@@ -61,9 +61,13 @@ met_data_imputed <- methyLImp2(met_data,
                                groups = colData(met_data)$definition,
                                BPPARAM = SnowParam(workers = 8, exportglobals = F))
 
+#--------------------B-values to M-values-----------------
+# See https://doi.org/10.1186/1471-2105-11-587 for decision basis
+
+
 #--------------------Differential methylation-------------
-TCGAanalyze_DMC(met_data,
-                groupCol = "definition",
-                p.cut = 0.5,
-                title = "Differential methylation",
-                save.directory = "3_Data/")
+#TCGAanalyze_DMC(met_data,
+#                groupCol = "definition",
+#                p.cut = 0.5,
+#                title = "Differential methylation",
+#                save.directory = "3_Data/")
