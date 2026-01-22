@@ -8,3 +8,6 @@
 exp_data <- read.table("3_Data/eig_exp_comparable.tsv",sep=',',row.names=T)     # mRNA expression data
 mir_data <- read.table("3_Data/eig_mir_comparable.tsv",sep=',',row.names=T)     # miRNA expression data
                                                                                 # CpG methylation data
+
+#-----------------------Concatenate--------------------------
+# The data concatenation is performed as to have the samples as columns and ALL features as rows
