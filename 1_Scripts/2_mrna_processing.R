@@ -2,16 +2,17 @@
 # processing techniques will be applied to ensure the mRNA expression values across every sample.
 
 #--------------------Load libraries-----------------------
-library(TCGAbiolinks)            # Version: 2.36.0
-library(SummarizedExperiment)    # Version: 1.48.1
-library(tidyverse)               # Version: 2.0.0
-library(biomaRt)                 # Version: 2.64.0
-library(NOISeq)                  # Version: 2.52.0
-library(edgeR)                   # Version: 4.6.2
-library(EDASeq)                  # Version: 2.42.0
-library(cqn)                     # Version: 1.45.0
-library(DESeq2)                  # Version: 1.48.1
-library(ggrepel)                 # Version: 0.9.6
+library(TCGAbiolinks)              # Version: 2.36.0
+library(SummarizedExperiment)      # Version: 1.48.1
+library(tidyverse)                 # Version: 2.0.0
+library(biomaRt)                   # Version: 2.64.0
+library(NOISeq)                    # Version: 2.52.0
+library(edgeR)                     # Version: 4.6.2
+library(EDASeq)                    # Version: 2.42.0
+library(cqn)                       # Version: 1.45.0
+library(DESeq2)                    # Version: 1.48.1
+library(ggrepel)                   # Version: 0.9.6
+source("4_Functions/Matrix_mfa.R")
 
 #--------------------Load object--------------------------
 # To understand where this object came from, check the 1_get_data.R script
@@ -223,9 +224,7 @@ dev.off()
 # Based on doi: 10.1093/bib/bbx060 to make the impact of components' variable comparable between data levels independently
 # from the number of variables in each block. In this case, it was decided to divide the data blocks by the square root
 # of the first eigenvalue of the transpose block multiplied by the original block and divided by the number of samples
-exp_eigen<- new_noiseq@assayData$exprs/
-  sqrt(eigen((t(as.matrix(new_noiseq@assayData$exprs)) %*% as.matrix(new_noiseq@assayData$exprs))/
-               ncol(new_noiseq@assayData$exprs))$values[1])
+exp_eigen<- mfa_normalize(new_noiseq@assayData$exprs)
 
 #--------------------Save expression matrices-------------
 write.table(new_noiseq@assayData$exprs,"3_Data/norm_exp_data.tsv",sep=',',row.names=T) # Normalized mRNA expression values

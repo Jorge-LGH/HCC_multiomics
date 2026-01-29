@@ -59,7 +59,7 @@ seqnames(rowRanges(met_data)) %>% table()                            # No ambigu
 met_data_imputed <- methyLImp2(met_data,
                                type = "450K",
                                groups = colData(met_data)$definition,
-                               BPPARAM = SnowParam(workers = 8, exportglobals = F))
+                               BPPARAM = SnowParam(workers = 6, exportglobals = F))
 
 #--------------------B-values to M-values-----------------
 # See https://doi.org/10.1186/1471-2105-11-587 for decision basis
